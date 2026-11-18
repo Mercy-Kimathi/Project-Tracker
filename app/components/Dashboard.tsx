@@ -17,7 +17,7 @@ function Sidebar(){
             <a href="#">Roadmap</a>
             <a href="#">Settings</a>
         </div>
-        <div className="">
+        <div className="flex-1">
             <Board />
         </div>
         </div>

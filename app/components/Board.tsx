@@ -1,6 +1,6 @@
 "use client";
 
-import { Circle } from "lucide-react";
+import { Circle, Kanban } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -8,6 +8,8 @@ import {
   useDroppable,
   useSensor,
   useSensors,
+  DragOverlay,
+  type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -41,6 +43,8 @@ const initialCards: BoardCard[] = [
   { id: "card-8", title: "Finalize QA", subtitle: "Web-19-Medium", status: "done" },
 ];
 
+
+
 function Droppable({ id, children }: { id: ColumnId; children: ReactNode }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -55,7 +59,11 @@ function Droppable({ id, children }: { id: ColumnId; children: ReactNode }) {
 }
 
 function Board() {
+  const [draggedCard, setDraggedCard] = useState<BoardCard | null>(null);
   const [cards, setCards] = useState<BoardCard[]>(initialCards);
+  const [addIssue, setAddIssue] =useState(true);
+  const [newTitle, setNewTitle]=useState("");
+  const [newDescription, setNewDescription]=useState("");
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -65,6 +73,27 @@ function Board() {
   );
 
   const getColumnCards = (status: ColumnId) => cards.filter((card) => card.status === status);
+
+  const handleAddIssue=()=>{
+    if(!newTitle.trim()) return;
+    const newCard: BoardCard ={
+      id: crypto.randomUUID(),
+      title:newTitle,
+      subtitle: newDescription,
+      status: "backlog"
+    }
+      setCards((currentCards)=> [...currentCards,newCard])
+
+      setNewTitle ("")
+      setNewDescription("")
+      setAddIssue(false)
+
+  };
+
+  const handleDragStart =(event: DragStartEvent)=> {
+    const selectedCard = cards.find((card)=> card.id === String(event.active.id));
+    setDraggedCard(selectedCard || null);
+  }
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -97,7 +126,10 @@ function Board() {
       }
 
       return updatedCards;
-    });
+    }); 
+    
+    
+    
   };
 
   return (
@@ -108,12 +140,48 @@ function Board() {
           <h1 className="text-white font-bold">Web redesign</h1>
         </div>
         <p className="text-[#cccccc]">Filters</p>
+         
+      
+      {addIssue && (
+        <form onSubmit={(e)=>{
+          e.preventDefault();
+          handleAddIssue();
+        }}>
+          <input 
+      value={newTitle}
+      onChange={(event)=>setNewTitle(event.target.value)}
+      placeholder="Issue title"
+      />
+      <input
+      value={newDescription} 
+      onChange={(event)=>setNewDescription(event.target.value)}
+      placeholder="Issue Description"
+      />
+      <div className="flex gap-6 justify-between items-left mt-1">
+      <button className="bg-white text-black rounded-lg px-4 py-2" onClick={()=> setAddIssue(true)}>+ Add Project</button>
+      <button className="bg-white text-black rounded-lg px-4 py-2" onClick={()=> setAddIssue(false)}>close</button>
+      <button className="bg-white text-black rounded-lg px-4 py-2 " onClick={()=>setAddIssue(false)}>Cancel</button>
+      </div>
+      </form>
+      )};
+      
+      
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-4 items-start gap-4 px-4 sm:grid-cols-4 xl:grid-cols-2">
+      <DndContext id ="Kanban-Board" sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd} >
+        <div className="grid grid-cols-4 items-start justify-between gap-4 px-4 ">
           {columns.map((column) => {
             const columnCards = getColumnCards(column.id);
+
+            <DragOverlay>
+              {draggedCard ? (
+                <Card 
+                id={draggedCard.id}
+                title={draggedCard.title}
+                subtitle={draggedCard.subtitle}
+                />
+              ): null}
+            </DragOverlay>
 
             return (
               <Droppable key={column.id} id={column.id}>
@@ -133,6 +201,10 @@ function Board() {
           
         </div>
       </DndContext>
+      <footer className="text-white">
+        contact: <a href="mailto:contact@example.com">contact@example.com</a>
+        &copy; 2024 Your Company. All rights reserved.
+      </footer>
     </>
   );
 }
